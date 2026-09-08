@@ -1,0 +1,6 @@
+{
+  "name": "Miyu — AI Companion",
+  "description": "AI companion độc lập, tự nhiên với phong cách hội thoại chân thực, tiết chế và hệ thống ký ức lâu dài.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

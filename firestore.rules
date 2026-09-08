@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions: Pillar 1 & 3 (Security Guards & ID Validation)
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is string && ts.size() <= 40;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isValidId(userId);
+      allow create, update: if isValidId(userId)
+        && request.resource.data.keys().hasAny(['id', 'name'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 100;
+      allow delete: if isValidId(userId);
+      
+      match /{document=**} {
+        allow read, write: if isValidId(userId);
+      }
+    }
+
+    // Conversations Collection
+    match /conversations/{conversationId} {
+      allow read: if isValidId(conversationId);
+      allow create, update: if isValidId(conversationId)
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 200;
+      allow delete: if isValidId(conversationId);
+
+      match /{document=**} {
+        allow read, write: if isValidId(conversationId);
+      }
+    }
+
+    // Messages Collection
+    match /messages/{messageId} {
+      allow read: if isValidId(messageId);
+      allow create: if isValidId(messageId)
+        && request.resource.data.keys().hasAll(['id', 'role', 'content', 'timestamp'])
+        && request.resource.data.role in ['user', 'model', 'system']
+        && request.resource.data.content is string
+        && request.resource.data.content.size() <= 10000
+        && isValidTimestamp(request.resource.data.timestamp);
+      allow update: if isValidId(messageId)
+        && (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions', 'isPinned', 'pinnedAt', 'pinnedBy', 'status'])
+        );
+      allow delete: if isValidId(messageId);
+    }
+
+    // Memories Collection
+    match /memories/{memoryId} {
+      allow read: if isValidId(memoryId);
+      allow create: if isValidId(memoryId)
+        && request.resource.data.keys().hasAll(['id', 'content', 'category', 'importance'])
+        && request.resource.data.content is string
+        && request.resource.data.content.size() <= 1000
+        && request.resource.data.importance is number
+        && request.resource.data.importance >= 1
+        && request.resource.data.importance <= 5;
+      allow update: if isValidId(memoryId)
+        && request.resource.data.content is string
+        && request.resource.data.content.size() <= 1000;
+      allow delete: if isValidId(memoryId);
+    }
+
+    // Preferences Collection
+    match /preferences/{prefId} {
+      allow read, write: if isValidId(prefId);
+    }
+
+    // Emotion States Collection
+    match /emotion_states/{stateId} {
+      allow read: if isValidId(stateId);
+      allow create, update: if isValidId(stateId)
+        && request.resource.data.primary is string
+        && request.resource.data.intensity is number;
+      allow delete: if isValidId(stateId);
+    }
+
+    // Relationship States Collection
+    match /relationship_states/{stateId} {
+      allow read: if isValidId(stateId);
+      allow create, update: if isValidId(stateId)
+        && request.resource.data.closenessStage is string
+        && request.resource.data.interactionCount is number;
+      allow delete: if isValidId(stateId);
+    }
+
+    // Chat Settings Collection (Wallpapers, Nicknames, Audio, Notifications)
+    match /chat_settings/{settingId} {
+      allow read: if isValidId(settingId);
+      allow create, update: if isValidId(settingId)
+        && request.resource.data.miyuNickname is string
+        && request.resource.data.miyuNickname.size() <= 50
+        && request.resource.data.userNickname is string
+        && request.resource.data.userNickname.size() <= 50;
+      allow delete: if isValidId(settingId);
+    }
+
+    // Pinned Messages Collection
+    match /pinned_messages/{pinId} {
+      allow read, write: if isValidId(pinId);
+    }
+  }
+}
